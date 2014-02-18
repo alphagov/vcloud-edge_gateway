@@ -12,6 +12,13 @@ module Vcloud
       def update_required?
         @update_required = false
 
+        begin
+          edge_gateway = Core::EdgeGateway.get_by_name(@local_config[:gateway])
+        rescue
+          EdgeGateway.logger.fatal("Cannot find EdgeGateway by name #{@local_config[:gateway]}")
+          raise
+        end
+
         firewall_service_config = EdgeGateway::ConfigurationGenerator::FirewallService.new.generate_fog_config(@local_config[:firewall_service])
         unless firewall_service_config.nil?
           differ = EdgeGateway::ConfigurationDiffer.new(firewall_service_config, @remote_config[:FirewallService])
@@ -21,7 +28,7 @@ module Vcloud
           end
         end
 
-        nat_service_config = EdgeGateway::ConfigurationGenerator::NatService.new(@local_config[:gateway], @local_config[:nat_service]).generate_fog_config
+        nat_service_config = EdgeGateway::ConfigurationGenerator::NatService.new(@local_config[:nat_service], edge_gateway.interfaces).generate_fog_config
 
         unless nat_service_config.nil?
           differ = EdgeGateway::ConfigurationDiffer.new(nat_service_config, @remote_config[:NatService])
