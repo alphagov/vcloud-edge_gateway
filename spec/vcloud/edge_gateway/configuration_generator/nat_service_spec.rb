@@ -6,18 +6,19 @@ module Vcloud
       describe NatService do
 
         before(:each) do
-          @edge_id = '1111111-7b54-43dd-9eb1-631dd337e5a7'
-          @mock_edge_gateway = double(
-            :edge_gateway,
-            :vcloud_gateway_interface_by_id => {
-              Network: {
-                name: 'ane012345',
-                href: 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
-              }
-            }
+          mock_uplink_interface = double(
+            :mock_uplink,
+            :network_name => "ane012345",
+            :network_id   => "2ad93597-7b54-43dd-9eb1-631dd337e5a7",
+            :network_href   => "https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7",
           )
-          expect(Vcloud::Core::EdgeGateway).to receive(:get_by_name).with(@edge_id)
-                                               .and_return(@mock_edge_gateway)
+          mock_internal_interface = double(
+            :mock_uplink,
+            :network_name => "internal_interface",
+            :network_id   => "12346788-1234-1234-1234-123456789000",
+            :network_href => "https://vmware.api.net/api/admin/network/12346788-1234-1234-1234-123456789000",
+          )
+          @interface_list = [ mock_uplink_interface, mock_internal_interface ]
         end
 
         context "SNAT rule defaults" do
@@ -29,7 +30,7 @@ module Vcloud
               original_ip: "192.0.2.2",
               translated_ip: "10.10.20.20",
             }]} # minimum NAT configuration with a rule
-            output = NatService.new(@edge_id, input).generate_fog_config
+            output = NatService.new(input, @interface_list).generate_fog_config
             @rule = output[:NatRule].first
           end
 
@@ -52,6 +53,7 @@ module Vcloud
               :RuleType=>"SNAT",
               :GatewayNatRule=>{
                 :Interface=>{
+                  :type=>"application/vnd.vmware.admin.network+xml",
                   :name=>"ane012345",
                   :href=>"https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7"
                 },
@@ -74,7 +76,7 @@ module Vcloud
               translated_ip: "10.10.20.20",
               protocol: 'tcp',
             }]} # minimum NAT configuration with a rule
-            output = NatService.new(@edge_id, input).generate_fog_config
+            output = NatService.new(input, @interface_list).generate_fog_config
             @rule = output[:NatRule].first
           end
 
@@ -97,6 +99,7 @@ module Vcloud
               :RuleType=>"DNAT",
               :GatewayNatRule=>{
                 :Interface=>{
+                  :type=>"application/vnd.vmware.admin.network+xml",
                   :name=>"ane012345",
                   :href=>"https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7"
                 },
@@ -142,6 +145,7 @@ module Vcloud
                     :GatewayNatRule => {
                       :Interface =>
                         {
+                          :type => "application/vnd.vmware.admin.network+xml",
                           :name => 'ane012345',
                           :href => 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
                         },
@@ -182,6 +186,7 @@ module Vcloud
                     :GatewayNatRule => {
                       :Interface =>
                         {
+                          :type => "application/vnd.vmware.admin.network+xml",
                           :name => 'ane012345',
                           :href => 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
                         },
@@ -220,6 +225,7 @@ module Vcloud
                     :GatewayNatRule => {
                       :Interface =>
                         {
+                          :type => "application/vnd.vmware.admin.network+xml",
                           :name => 'ane012345',
                           :href => 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
                         },
@@ -258,6 +264,7 @@ module Vcloud
                     :GatewayNatRule => {
                       :Interface =>
                         {
+                          :type => "application/vnd.vmware.admin.network+xml",
                           :name => 'ane012345',
                           :href => 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
                         },
@@ -296,6 +303,7 @@ module Vcloud
                     :GatewayNatRule => {
                       :Interface =>
                         {
+                          :type => "application/vnd.vmware.admin.network+xml",
                           :name => 'ane012345',
                           :href => 'https://vmware.api.net/api/admin/network/2ad93597-7b54-43dd-9eb1-631dd337e5a7'
                         },
@@ -314,43 +322,9 @@ module Vcloud
 
           test_cases.each do |test_case|
             it "#{test_case[:title]}" do
-              generated_config = NatService.new(@edge_id, test_case[:input]).generate_fog_config
+              generated_config = NatService.new(test_case[:input], @interface_list).generate_fog_config
               expect(generated_config).to eq(test_case[:output])
             end
-          end
-
-          it "should only make a single API call per network specified" do
-            input = {
-              nat_rules: [
-                {
-                  rule_type: 'DNAT',
-                  network_id: '2ad93597-7b54-43dd-9eb1-631dd337e5a7',
-                  original_ip: "192.0.2.2",
-                  original_port: '8081',
-                  translated_port: '8081',
-                  translated_ip: "10.10.20.21",
-                },
-                {
-                  rule_type: 'DNAT',
-                  network_id: '2ad93597-7b54-43dd-9eb1-631dd337e5a7',
-                  original_ip: "192.0.2.2",
-                  original_port: '8082',
-                  translated_port: '8082',
-                  translated_ip: "10.10.20.22",
-                },
-                {
-                  rule_type: 'DNAT',
-                  network_id: '2ad93597-7b54-43dd-9eb1-631dd337e5a7',
-                  original_ip: "192.0.2.2",
-                  original_port: '8083',
-                  translated_port: '8083',
-                  translated_ip: "10.10.20.23",
-                },
-              ]
-            }
-            expect(@mock_edge_gateway).
-              to receive(:vcloud_gateway_interface_by_id).exactly(1).times
-            NatService.new(@edge_id, input).generate_fog_config
           end
 
         end
