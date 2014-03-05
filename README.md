@@ -148,7 +148,7 @@ A DNAT rule has the following form, and translates packets going to the
 #### load_balancer_service
 
 The load balancer service comprises two sets of configurations: 'pools' and
-'virtual_servers'. These are coupled together to form a load balanced service:
+'virtual_servers'. These are coupled together to form load balanced services:
 
 * A virtual_server provides the front-end of a load balancer - the port and
   IP that clients connect to.
@@ -159,7 +159,8 @@ The load balancer service comprises two sets of configurations: 'pools' and
 * Multiple virtual_servers can specify the same pool (to run the same service
   on different FQDNs, for example)
 
-A typical load balancer configuration (for one service) would look something like:
+A typical load balancer configuration (for one service, mapping 192.0.2.0:80 to
+port 8080 on three servers) would look something like:
 
 ```
 load_balancer_service:
@@ -183,7 +184,129 @@ load_balancer_service:
     pool: 'example-pool-1' # must refer to a pool name detailed above
     service_profiles:
       http:  # protocol to balance, can be tcp/http/https.
-      port: '80'  # external port
+        port: '80'  # external port
+```
+
+The load balancer service is quite basic, but supports the following:
+
+* Layer 7 balancing of HTTP traffic
+* Balancing of HTTPS traffic (though no decryption is possible, so this is
+  purely level-4 based)
+* Layer 4 balancing of arbitrary TCP traffic.
+* URI-based healthchecks of backend nodes
+* Several balancing algorithms, such as 'round robin', and 'least connections'
+* Ability to persist sessions to the same backend member node, via a variety of
+  means (eg HTTP cookie value, SSL session ID, source IP hash).
+
+Rather unusually, each virtual server and pool combination can handle traffic
+balancing for HTTP, HTTPS, and a single TCP port simultaneously. For example:
+
+```
+load_balancer_service:
+  pools:
+  - name: 'example-multi-protocol-pool-1'
+    description: 'A pool balancing HTTP, HTTPS, and SMTP traffic'
+    service:
+      http: {}
+      https: {}
+      tcp:
+        port: 25
+    members:
+    - ip_address: 10.10.10.14
+    - ip_address: 10.10.10.15
+  virtual_servers:
+  - name: 'example-multi-protocol-virtual-server-1'
+    description: 'A virtual server connecting to example-pool-1'
+    ip_address: 192.0.2.11
+    network: '12345678-1234-1234-1234-123456789012'
+    pool: 'example-multi-protocol-pool-1'
+    service_profiles:
+      http: {}
+      https: {}
+      tcp:
+        port: 25
+```
+
+The above is particularly useful for services that require balancing of HTTP
+and HTTPS traffic together.
+
+#### load_balancer_service pool entries in detail
+
+Each pool entry consists of:
+
+* a pool name, and optional description
+* a 'service' section - which protocol(s) to balance, and how to balance them.
+* a 'members' list - which backend nodes to use.
+
+For example:
+
+```
+name: test-pool-1
+description: Balances HTTP and HTTPS
+service:
+  http: {}
+  https: {}
+members:
+- ip_address: 10.10.10.11
+- ip_address: 10.10.10.12
+  weight: 10
+```
+
+Here we have:
+
+* HTTP and HTTPS traffic balanced across 10.10.10.11 and 10.10.10.12.
+* member 10.10.10.11 has a default `weight` of 1
+* member 10.10.10.12 has a `weight` of 10, so will receive 10x the traffic of
+  10.10.10.11
+* http and https services are using all defaults, which means:
+  * they use standard ports (80 for HTTP, 443 for HTTPS)
+  * they will use 'round robin' balancing
+  * HTTP service will 'GET /' from each node to check its health
+  * HTTPS service will check 'SSL hello' response to confirm its health.
+
+Service entries are the most complex, but generally the defaults are ok.
+
+A more complete HTTP service entry looks like:
+
+```
+service:
+  http:
+    port: 8080
+    algorithm: 'ROUND_ROBIN'  # can also IP_HASHbe 'LEAST_CONNECTED', 'IP_HASH', 'URI'
+    health_check:
+      port: 8081            # port to check health on, if not service port above.
+      uri: /healthcheck     # for HTTP, the URI to check for 200/30* response
+      protocol: HTTP        # the protocol to talk to health check service: HTTP, SSL, TCP
+      health_threshold:  2  # how many checks to success before reenabling member
+      unhealth_threshold: 3 # how many checks to fail before disabling member
+      interval: 5           # interval between checks
+      timeout: 15           # how long to wait before assuming healthcheck has failed
+
+```
+
+See [the vCloud Director Admin Guide](http://pubs.vmware.com/vcd-51/topic/com.vmware.vcloud.admin.doc_51/GUID-C12B3954-155F-48AF-9855-E0DE026752D0.html)
+for more details on configuring Pool entries.
+
+#### load_balancer_service virtual_server entries in detail
+
+Each virtual_server entry must consist of:
+
+* a virtual_server name, and optional description
+* a 'service_profiles' section: which protocol(s) to handle
+* a `network` reference - the UUID of the network which the ip_address sits on.
+* a backend `pool` to use, referenced by name
+
+For example:
+
+```
+name: test-virtual_server-1
+description: Public facing side of test-pool-1
+pool: test-pool-1
+ip_address: 192.0.2.55  # front-end IP address, usually external
+network: 12345678-1234-1234-1234-1234567890aa # UUID of network that ip_address sits on
+service_profiles:
+  http: { port: 8080 }   # port defaults to 80
+  https: { port: 8443 }  # port defaults to 443
 ```
 
 ### Finding external network details from vcloud-walk
