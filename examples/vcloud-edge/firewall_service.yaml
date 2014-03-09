@@ -1,0 +1,44 @@
+# Example Firewall configuration
+#
+# The EdgeGateway firewall_service mostly consists of:
+#  * a default policy
+#  * a list of firewall rules
+#
+# Our default firewall policy is 'drop', with a default
+# per-rule policy of 'allow'
+#
+# Rules are listed in order of application.
+#
+# The 'source_ip' and 'destination_ip' fields take a
+# valid 'vCloud IP range' value, so the following are valid:
+#  * IP address, eg 192.0.2.55
+#  * CIDR range, eg 192.0.2.0/24
+#  * IP range, eg 192.0.2.55-192.0.2.75
+#  * Keyword: Any, internal, external
+#
+# 'protocol' can be 'tcp', 'udp', 'tcp+udp', or 'icmp'
+#
+---
+gateway: OurEdgeGatewayName
+firewall_service:
+  enabled: true  # default to enabled, can disable service with 'false'
+  policy: drop   # firewall policy: default to drop
+  firewall_rules:
+    # rules default to allow
+  - description: "Public ICMP access to frontend network"
+    protocols: "icmp"
+    destination_ip: "192.0.2.10-192.0.2.19"
+    source_ip: "Any"
+  - description: "Public HTTPS access to Load Balancer"
+    destination_port_range: "443"
+    destination_ip: "192.0.2.15"
+    source_ip: "Any"
+  - description: "SSH Access from secure site"
+    destination_ip: "192.0.2.10-192.0.2.19"
+    source_ip: "198.51.100.44"
+    destination_port_range: '22'
+  - description: "Outbound all"
+    protocols: "any"
+    destination_ip: "external"
+    source_ip: 'Any'
+    destination_port_range: 'any'
