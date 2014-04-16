@@ -27,7 +27,8 @@ To configure an Edge Gateway:
 
 ### Credentials
 
-vCloud Edge Gateway is based around [fog]. To use it you'll need to give it credentials that allow it to talk to a VMware
+vCloud Edge Gateway is based around [fog]. To use it you'll need to give it
+credentials that allow it to talk to a VMware
 environment. Fog offers two ways to do this.
 
 #### 1. Create a `.fog` file containing your credentials
@@ -41,7 +42,9 @@ For example:
       vcloud_director_password: 'password'
       vcloud_director_host: 'host.api.example.com'
 
-Unfortunately current usage of fog requires the password in this file. Multiple sets of credentials can be specified in the fog file, using the following format:
+Unfortunately current usage of fog requires the password in this file. Multiple
+sets of credentials can be specified in the fog file, using the following
+format:
 
     test:
       vcloud_director_username: 'username@org_name'
@@ -53,25 +56,33 @@ Unfortunately current usage of fog requires the password in this file. Multiple 
       vcloud_director_password: 'password'
       vcloud_director_host: 'host.api.vendor.net'
 
-You can then pass the `FOG_CREDENTIAL` environment variable at the start of your command. The value of the `FOG_CREDENTIAL` environment variable is the name of the credential set in your fog file which you wish to use.  For instance:
+You can then pass the `FOG_CREDENTIAL` environment variable at the start of your
+command. The value of the `FOG_CREDENTIAL` environment variable is the name of
+the credential set in your fog file which you wish to use.  For instance:
 
     $ FOG_CREDENTIAL=test2 vcloud-configure-edge input.yaml
 
-To understand more about `.fog` files, visit the 'Credentials' section here => http://fog.io/about/getting_started.html.
+To understand more about `.fog` files, visit the 'Credentials' section here
+=> http://fog.io/about/getting_started.html.
 
 #### 2. Log on externally and supply your session token
 
-You can choose to log on externally by interacting independently with the API and supplying your session token to the
-tool by setting the `FOG_VCLOUD_TOKEN` ENV variable. This option reduces the risk footprint by allowing the user to
-store their credentials in safe storage. The default token lifetime is '30 minutes idle' - any activity extends the life by another 30 mins.
+You can choose to log on externally by interacting independently with the API
+and supplying your session token to the tool by setting the `FOG_VCLOUD_TOKEN`
+ENV variable. This option reduces the risk footprint by allowing the user to
+store their credentials in safe storage. The default token lifetime is '30
+minutes idle' - any activity extends the life by another 30 mins.
 
-A basic example of this would be the following:
+First create a .fog file in your home directory af above, but set the password
+to a dummy value. The version of fog we currently use requires this key, but we
+don't use it.
 
-    curl
-       -D-
-       -d ''
-       -H 'Accept: application/*+xml;version=5.1' -u '<user>@<org>'
-       https://host.com/api/sessions
+You then need to log on independently and get a session token. A basic example
+of this would be the following:
+
+    curl -D- -d '' \
+       -H 'Accept: application/*+xml;version=5.1' -u '<user>@<org>' \
+       https://api.vcd.portal.skyscapecloud.com/api/sessions
 
 This will prompt for your password.
 
@@ -81,7 +92,19 @@ From the headers returned, select the header below
 
 Use token as ENV var FOG_VCLOUD_TOKEN
 
-    $ FOG_VCLOUD_TOKEN=AAAABBBBBCCCCCCDDDDDDEEEEEEFFFFF= vcloud-configure-edge input.yaml
+    FOG_VCLOUD_TOKEN=AAAABBBBBCCCCCCDDDDDDEEEEEEFFFFF= bundle exec ...
+
+Or
+
+    export FOG_VCLOUD_TOKEN=AAAABBBBBCCCCCCDDDDDDEEEEEEFFFFF=
+
+You can then export the `FOG_CREDENTIAL` environment variable or set it at the
+start of your command.  The value of the `FOG_CREDENTIAL` environment variable
+is the name of the credential set in your fog file which you wish to use.  For
+instance:
+
+    FOG_CREDENTIAL=test2 bundle exec vcloud-launch node.yaml
+
 
 ### Configure edge gateway services
 
@@ -148,12 +171,12 @@ Rule fields have the following behaviour
 The edge gateway NAT service offers simple stateful Source-NAT and
 Destination-NAT rules.
 
-SNAT rules take a source IP address range and 'Translated IP address'. The translated
-address is generally the public address that you wish traffic to appear to be
-coming from. SNAT rules are typically used to enable outbound connectivity from
-a private address range behind the edge. The UUID of the external network that
-the traffic should appear to come from must also be specified, as per the
-`network_id` field below.
+SNAT rules take a source IP address range and 'Translated IP address'. The
+translated address is generally the public address that you wish traffic to
+appear to be coming from. SNAT rules are typically used to enable outbound
+connectivity from a private address range behind the edge. The UUID of the
+external network that the traffic should appear to come from must also be
+specified, as per the `network_id` field below.
 
 A SNAT rule has the following form:
 
@@ -209,7 +232,8 @@ The load balancer service comprises two sets of configurations: 'pools' and
 * Multiple virtual_servers can specify the same pool (to run the same service
   on different FQDNs, for example)
 * virtual_servers define any 'session persistence' information, if sessions
-  are required to stick to the same pool member. (Session persistence is not currently supported by this tool.)
+  are required to stick to the same pool member. (Session persistence is not
+  currently supported by this tool.)
 * pools define 'member healthchecks', and so are aware of the health of their
   member nodes.
 
@@ -241,7 +265,8 @@ load_balancer_service:
         port: '80'  # external port
 ```
 
-The vCloud Director load balancer service is quite basic, but supports the following:
+The vCloud Director load balancer service is quite basic, but supports the
+following:
 
 * Layer 7 balancing of HTTP traffic
 * Balancing of HTTPS traffic (though no decryption is possible, so this is
@@ -254,7 +279,8 @@ The vCloud Director load balancer service is quite basic, but supports the follo
 
 `vcloud-configure-edge` supports all of the above features.
 
-It is also worth noting that the vCloud Director load balancer *does not support*:
+It is also worth noting that the vCloud Director load balancer *does not
+support*:
 
 * In vCD 5.1, TCP and HTTPS layer-4 balancing are based on TCP port forwarding.
   There is no NAT in the mix, so the backend pools see the IP address/port of
@@ -417,7 +443,8 @@ You can find full configuration examples in the `examples` folder.
 
 ### Debug output
 
-Set environment variable `DEBUG=true` and/or `EXCON_DEBUG=true` to see Fog debug info.
+Set environment variable `DEBUG=true` and/or `EXCON_DEBUG=true` to see Fog debug
+info.
 
 ### References
 
