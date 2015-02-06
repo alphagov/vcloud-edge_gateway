@@ -18,11 +18,14 @@ module Vcloud
 
         def generate_static_route_section
           routes = @input_config[:static_routes]
+          return [] if routes.nil?
           routes.collect do |route|
+            route[:enabled] ||= 'true'
             {
               Name:             route[:name],
               Network:          route[:network],
               NextHopIp:        route[:next_hop],
+              IsEnabled:        route[:enabled],
               GatewayInterface: generate_gateway_interface_section(route[:apply_on])
 
             }
