@@ -73,11 +73,9 @@ module Vcloud
 
 
         it "should not then configure the StaticRoutingService if updated again with the same configuration" do
-        #  expect(Vcloud::Core.logger).to receive(:info).
-         #   with('EdgeGateway::Configure.update: Configuration is already up to date. Skipping.')
+          expect(Vcloud::Core.logger).to receive(:info).
+            with('EdgeGateway::Configure.update: Configuration is already up to date. Skipping.')
           diff = EdgeGateway::Configure.new(@initial_static_routing_config_file, @vars_config_file).update
-
-          puts diff
 
           expect(diff).to eq({})
         end
