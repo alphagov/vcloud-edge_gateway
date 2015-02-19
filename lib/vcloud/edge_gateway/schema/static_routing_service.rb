@@ -4,6 +4,7 @@ module Vcloud
       STATIC_ROUTE = {
         type: Hash,
         internals: {
+          enabled:  { type: 'boolean', required: false },
           name:     { type: 'string', required: true },
           network:  { type: 'ip_address_range', required: true },
           next_hop: { type: 'ip_address', required: true },
