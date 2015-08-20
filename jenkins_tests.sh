@@ -8,6 +8,8 @@ function cleanup {
   unset FOG_RC
 }
 
+export RBENV_VERSION="2.1.0"
+
 export FOG_RC=$(mktemp /tmp/vcloud_fog_rc.XXXXXXXXXX)
 trap cleanup EXIT
 
