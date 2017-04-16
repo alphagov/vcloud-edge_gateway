@@ -2,6 +2,7 @@ require 'hashdiff'
 
 module Vcloud
   module EdgeGateway
+    # This class is inherited by service-specific differ classes.
     class ConfigurationDiffer
 
         def initialize local, remote
@@ -21,6 +22,9 @@ module Vcloud
           strip_fields_for_differ_to_ignore(@remote) unless @remote.nil?
         end
 
+        # This class is typically overridden by the inheriting class to
+        # remove fields that are specific to that service e.g. the IDs of
+        # firewall rules.
         def strip_fields_for_differ_to_ignore(config)
           config
         end
